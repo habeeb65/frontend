@@ -73,6 +73,47 @@ export const tenantService = {
   },
 };
 
+// Define interfaces if they are not already globally available or shared
+interface WorkflowStage {
+  id: string;
+  label: string;
+  count?: number;
+  isActive?: boolean;
+  x?: number;
+  y?: number;
+}
+
+interface WorkflowConnection {
+  source: string;
+  target: string;
+  id?: string;
+}
+
+interface PurchaseWorkflowData {
+  stages: WorkflowStage[];
+  connections: WorkflowConnection[];
+}
+
+export const getPurchaseWorkflowStats = async (): Promise<PurchaseWorkflowData> => {
+  // Simulate API call delay
+  await new Promise(resolve => setTimeout(resolve, 500));
+
+  // Return mock data
+  return {
+    stages: [
+      { id: '1', label: 'API: PO Created', count: 20, isActive: true, x: 50, y: 0 },
+      { id: '2', label: 'API: Goods Received', count: 12, isActive: true, x: 50, y: 100 },
+      { id: '3', label: 'API: Payment Processing', count: 7, isActive: false, x: 50, y: 200 },
+      { id: '4', label: 'API: Payment Cleared', count: 60, isActive: false, x: 50, y: 300 }
+    ],
+    connections: [
+      { source: '1', target: '2', id: 'e1-2' },
+      { source: '2', target: '3', id: 'e2-3' },
+      { source: '3', target: '4', id: 'e3-4' }
+    ]
+  };
+};
+
 // Product service
 export const productService = {
   getProducts: async (tenantId: string) => {
