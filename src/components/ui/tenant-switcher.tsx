@@ -28,7 +28,7 @@ interface TenantSwitcherProps extends PopoverTriggerProps {}
 
 export default function TenantSwitcher({ className }: TenantSwitcherProps) {
   const [open, setOpen] = React.useState(false);
-  const { tenants, currentTenant, setCurrentTenant } = useTenant();
+  const { tenants, currentTenant, setCurrentTenant, isLoading } = useTenant();
 
   const handleSelect = (tenant: Tenant) => {
     setCurrentTenant(tenant);
@@ -44,6 +44,7 @@ export default function TenantSwitcher({ className }: TenantSwitcherProps) {
           aria-expanded={open}
           aria-label="Select a tenant"
           className={cn("w-[220px] justify-between", className)}
+          disabled={isLoading || tenants.length <= 1}
         >
           {currentTenant ? (
             <>

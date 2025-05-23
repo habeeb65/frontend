@@ -50,7 +50,7 @@ type LoginFormValues = z.infer<typeof loginFormSchema>;
 type CreateTenantFormValues = z.infer<typeof createTenantFormSchema>;
 
 export default function LoginForm() {
-  const { login } = useAuth();
+  const { login, signup } = useAuth();
   const { tenants, createTenant, isLoading: tenantsLoading } = useTenant();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
@@ -78,15 +78,10 @@ export default function LoginForm() {
   });
 
   const onLoginSubmit = async (data: LoginFormValues) => {
-    if (!selectedTenant && tenants.length > 0) {
-      setError("Please select a tenant");
-      return;
-    }
-
     try {
       setIsLoading(true);
       setError(null);
-      await login(data.email, data.password, selectedTenant?.id);
+      await login(data.email, data.password);
       navigate("/dashboard");
     } catch (err) {
       setError("Invalid email or password");
@@ -106,11 +101,20 @@ export default function LoginForm() {
         primaryColor: data.primaryColor,
       });
 
-      // Then login with the new tenant
-      await login(data.email, data.password, newTenant.id);
+      if (!newTenant || !newTenant.id) {
+        throw new Error(
+          "Failed to create tenant: Invalid tenant data returned",
+        );
+      }
+
+      // Then signup with the new tenant
+      await signup(data.email, data.password, data.name, newTenant.id);
       navigate("/dashboard");
-    } catch (err) {
-      setError("Failed to create tenant. Please try again.");
+    } catch (err: any) {
+      console.error("Tenant creation error:", err);
+      setError(
+        `Failed to create tenant: ${err.message || "Please try again."}`,
+      );
     } finally {
       setIsLoading(false);
     }
@@ -143,129 +147,59 @@ export default function LoginForm() {
             </div>
           )}
 
-          <div className="space-y-4">
-            {tenants.length > 0 && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Select Tenant</label>
-                <Popover
-                  open={openTenantSelector}
-                  onOpenChange={setOpenTenantSelector}
-                >
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={openTenantSelector}
-                      aria-label="Select a tenant"
-                      className="w-full justify-between"
-                      disabled={isLoading || tenantsLoading}
-                    >
-                      {selectedTenant ? (
-                        <>
-                          <Avatar
-                            className="mr-2 h-5 w-5"
-                            src={selectedTenant.logo}
-                          />
-                          {selectedTenant.name}
-                        </>
-                      ) : (
-                        "Select tenant"
-                      )}
-                      <ChevronsUpDown className="ml-auto h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-full p-0">
-                    <Command>
-                      <CommandList>
-                        <CommandInput placeholder="Search tenant..." />
-                        <CommandEmpty>No tenant found.</CommandEmpty>
-                        <CommandGroup heading="Tenants">
-                          {tenants.map((tenant) => (
-                            <CommandItem
-                              key={tenant.id}
-                              onSelect={() => {
-                                setSelectedTenant(tenant);
-                                setOpenTenantSelector(false);
-                              }}
-                              className="text-sm"
-                            >
-                              <Avatar
-                                className="mr-2 h-5 w-5"
-                                src={tenant.logo}
-                              />
-                              {tenant.name}
-                              <Check
-                                className={cn(
-                                  "ml-auto h-4 w-4",
-                                  selectedTenant?.id === tenant.id
-                                    ? "opacity-100"
-                                    : "opacity-0",
-                                )}
-                              />
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
-            )}
+          <Form {...loginForm}>
+            <form
+              onSubmit={loginForm.handleSubmit(onLoginSubmit)}
+              className="space-y-4"
+            >
+              <FormField
+                control={loginForm.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="admin@example.com"
+                        type="email"
+                        autoComplete="email"
+                        disabled={isLoading}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={loginForm.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="••••••••"
+                        type="password"
+                        autoComplete="current-password"
+                        disabled={isLoading}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? "Signing in..." : "Sign in"}
+              </Button>
+            </form>
+          </Form>
 
-            <Form {...loginForm}>
-              <form
-                onSubmit={loginForm.handleSubmit(onLoginSubmit)}
-                className="space-y-4"
-              >
-                <FormField
-                  control={loginForm.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="admin@example.com"
-                          type="email"
-                          autoComplete="email"
-                          disabled={isLoading}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={loginForm.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Password</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="••••••••"
-                          type="password"
-                          autoComplete="current-password"
-                          disabled={isLoading}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Signing in..." : "Sign in"}
-                </Button>
-              </form>
-            </Form>
-
-            <div className="text-center text-sm">
-              <p className="text-muted-foreground">
-                Demo credentials: admin@example.com / password
-              </p>
-            </div>
+          <div className="text-center text-sm">
+            <p className="text-muted-foreground">
+              Don't have an account? Create a tenant to get started.
+            </p>
           </div>
         </TabsContent>
 

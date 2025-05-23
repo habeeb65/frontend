@@ -1,25 +1,20 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { User } from "@/types";
-import { authService } from "@/services/api";
-import { adaptUser } from "@/utils/djangoAdapter";
+import { supabase } from "@/lib/supabase";
 import { useTenant } from "@/context/TenantContext";
-
-// Mock user data for development without backend
-const mockUser: User = {
-  id: "1",
-  email: "admin@example.com",
-  name: "Admin User",
-  role: "admin",
-  tenantId: "1",
-  avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=admin",
-};
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string, tenantId?: string) => Promise<void>;
-  logout: () => void;
+  signup: (
+    email: string,
+    password: string,
+    name: string,
+    tenantId: string,
+  ) => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -27,7 +22,8 @@ const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
   isLoading: true,
   login: async () => {},
-  logout: () => {},
+  signup: async () => {},
+  logout: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -37,68 +33,130 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { setCurrentTenant } = useTenant();
 
   useEffect(() => {
     // Check for existing session
     const checkAuth = async () => {
       try {
-        const savedUser = localStorage.getItem("erp_user");
-        const token = localStorage.getItem("erp_token");
+        setIsLoading(true);
 
-        if (savedUser && token) {
-          setUser(JSON.parse(savedUser));
+        // Get session from Supabase
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (session) {
+          // Get user profile from profiles table
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", session.user.id)
+            .single();
+
+          if (profile) {
+            const userData: User = {
+              id: profile.id,
+              email: profile.email,
+              name: profile.name,
+              role: profile.role as "admin" | "manager" | "staff",
+              tenantId: profile.tenant_id,
+              avatar: profile.avatar || undefined,
+            };
+
+            setUser(userData);
+
+            // Get tenant data
+            const { data: tenant } = await supabase
+              .from("tenants")
+              .select("*")
+              .eq("id", profile.tenant_id)
+              .single();
+
+            if (tenant) {
+              setCurrentTenant({
+                id: tenant.id,
+                name: tenant.name,
+                logo: tenant.logo || undefined,
+                primaryColor: tenant.primary_color || undefined,
+                active: tenant.is_active,
+              });
+            }
+          }
         }
-
-        setIsLoading(false);
       } catch (error) {
         console.error("Auth error:", error);
+      } finally {
         setIsLoading(false);
       }
     };
 
     checkAuth();
-  }, []);
 
-  const login = async (email: string, password: string, tenantId?: string) => {
+    // Set up auth state change listener
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_IN" && session) {
+        // Get user profile
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", session.user.id)
+          .single();
+
+        if (profile) {
+          const userData: User = {
+            id: profile.id,
+            email: profile.email,
+            name: profile.name,
+            role: profile.role as "admin" | "manager" | "staff",
+            tenantId: profile.tenant_id,
+            avatar: profile.avatar || undefined,
+          };
+
+          setUser(userData);
+
+          // Get tenant data
+          const { data: tenant } = await supabase
+            .from("tenants")
+            .select("*")
+            .eq("id", profile.tenant_id)
+            .single();
+
+          if (tenant) {
+            setCurrentTenant({
+              id: tenant.id,
+              name: tenant.name,
+              logo: tenant.logo || undefined,
+              primaryColor: tenant.primary_color || undefined,
+              active: tenant.is_active,
+            });
+          }
+        }
+      } else if (event === "SIGNED_OUT") {
+        setUser(null);
+        setCurrentTenant(null);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [setCurrentTenant]);
+
+  const login = async (email: string, password: string) => {
     try {
       setIsLoading(true);
 
-      // Check if we have a backend API URL configured
-      const apiUrl = import.meta.env.VITE_API_URL;
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-      if (apiUrl) {
-        // Use real backend
-        try {
-          const response = await authService.login(email, password, tenantId);
-          const { token, user: userData } = response;
+      if (error) throw error;
 
-          // Store token and user data
-          localStorage.setItem("erp_token", token);
-          const adaptedUser = adaptUser(userData);
-          setUser(adaptedUser);
-          localStorage.setItem("erp_user", JSON.stringify(adaptedUser));
-        } catch (error) {
-          console.error("Login error:", error);
-          throw new Error("Invalid credentials");
-        }
-      } else {
-        // Use mock data for development
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        if (email === "admin@example.com" && password === "password") {
-          // If tenantId is provided, update the mock user
-          const mockUserWithTenant = {
-            ...mockUser,
-            tenantId: tenantId || mockUser.tenantId,
-          };
-
-          setUser(mockUserWithTenant);
-          localStorage.setItem("erp_user", JSON.stringify(mockUserWithTenant));
-          localStorage.setItem("erp_token", "mock-token-for-development");
-        } else {
-          throw new Error("Invalid credentials");
-        }
-      }
+      // Auth state listener will handle setting the user
     } catch (error) {
       console.error("Login error:", error);
       throw error;
@@ -107,9 +165,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  const logout = () => {
-    authService.logout();
-    setUser(null);
+  const signup = async (
+    email: string,
+    password: string,
+    name: string,
+    tenantId: string,
+  ) => {
+    try {
+      setIsLoading(true);
+
+      // Sign up with Supabase Auth
+      const {
+        data: { user: authUser },
+        error,
+      } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+      if (!authUser) throw new Error("Failed to create user");
+
+      // Create profile in profiles table
+      const { error: profileError } = await supabase.from("profiles").insert({
+        id: authUser.id,
+        email,
+        name,
+        role: "admin",
+        tenant_id: tenantId,
+        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`,
+      });
+
+      if (profileError) throw profileError;
+
+      // Auth state listener will handle setting the user
+    } catch (error) {
+      console.error("Signup error:", error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      setCurrentTenant(null);
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
   };
 
   return (
@@ -119,6 +224,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         isAuthenticated: !!user,
         isLoading,
         login,
+        signup,
         logout,
       }}
     >

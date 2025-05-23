@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Bell, Menu, Settings, User } from "lucide-react";
+import { Bell, Menu, MessageSquareText, Settings, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -63,6 +64,38 @@ export default function Header({ onMenuToggle }: HeaderProps) {
             <DropdownMenuItem>
               Payment received from Customer #123
             </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="relative">
+              <MessageSquareText className="h-5 w-5" />
+              <span className="absolute right-0 top-0 h-2 w-2 rounded-full bg-green-500"></span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-[300px]">
+            <DropdownMenuLabel>AI Support Chat</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <div className="p-3 max-h-[300px] overflow-y-auto space-y-3">
+              <div className="bg-muted p-2 rounded-md text-sm">
+                Hello! How can I help you with your wholesale business today?
+              </div>
+              <div className="flex justify-end">
+                <div className="bg-primary text-primary-foreground p-2 rounded-md text-sm max-w-[80%]">
+                  I need help with inventory tracking
+                </div>
+              </div>
+              <div className="bg-muted p-2 rounded-md text-sm">
+                I can help with that! You can access inventory tracking from the
+                dashboard menu or by clicking on the Inventory tab.
+              </div>
+            </div>
+            <div className="p-3 border-t">
+              <div className="flex gap-2">
+                <Input placeholder="Type your message..." className="flex-1" />
+                <Button size="sm">Send</Button>
+              </div>
+            </div>
           </DropdownMenuContent>
         </DropdownMenu>
         <Button variant="ghost" size="icon" asChild>

@@ -64,6 +64,9 @@ function App() {
                   />
                 </Route>
               </Route>
+
+              {/* Add a catch-all route that redirects to login */}
+              <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
             {import.meta.env.VITE_TEMPO === "true" && useRoutes(routes)}
           </>

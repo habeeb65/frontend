@@ -104,7 +104,14 @@ export default function DashboardOverview() {
           </TabsTrigger>
         </TabsList>
         <TabsContent value="inventory" className="space-y-4">
-          <InventoryPanel />
+          <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
+            <div className="space-y-4">
+              <InventoryPanel />
+            </div>
+            <div className="space-y-4">
+              <LotTrackingPanel />
+            </div>
+          </div>
         </TabsContent>
         <TabsContent value="sales" className="space-y-4">
           <SalesPanel />
