@@ -18,6 +18,21 @@ import {
 import InventoryPanel from "./InventoryPanel";
 import SalesPanel from "./SalesPanel";
 import PurchasePanel from "./PurchasePanel";
+import PurchaseWorkflowDiagram from './PurchaseWorkflowDiagram';
+
+const mockWorkflowData = {
+  stages: [
+    { id: '1', label: 'PO Created', count: 15, isActive: true, x: 50, y: 0 },
+    { id: '2', label: 'Goods Received', count: 8, isActive: true, x: 50, y: 100 },
+    { id: '3', label: 'Payment Processing', count: 5, isActive: false, x: 50, y: 200 },
+    { id: '4', label: 'Payment Cleared', count: 50, isActive: false, x: 50, y: 300 }
+  ],
+  connections: [
+    { source: '1', target: '2', id: 'e1-2' },
+    { source: '2', target: '3', id: 'e2-3' },
+    { source: '3', target: '4', id: 'e3-4' }
+  ]
+};
 
 export default function DashboardOverview() {
   const { currentTenant } = useTenant();
@@ -85,24 +100,26 @@ export default function DashboardOverview() {
       </div>
 
       <Tabs defaultValue="inventory" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="inventory">
-            <Package className="mr-2 h-4 w-4" />
-            Inventory
-          </TabsTrigger>
-          <TabsTrigger value="sales">
-            <DollarSign className="mr-2 h-4 w-4" />
-            Sales
-          </TabsTrigger>
-          <TabsTrigger value="purchases">
-            <ShoppingCart className="mr-2 h-4 w-4" />
-            Purchases
-          </TabsTrigger>
-          <TabsTrigger value="analytics">
-            <BarChart3 className="mr-2 h-4 w-4" />
-            Analytics
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto whitespace-nowrap">
+          <TabsList>
+            <TabsTrigger value="inventory">
+              <Package className="mr-2 h-4 w-4" />
+              Inventory
+            </TabsTrigger>
+            <TabsTrigger value="sales">
+              <DollarSign className="mr-2 h-4 w-4" />
+              Sales
+            </TabsTrigger>
+            <TabsTrigger value="purchases">
+              <ShoppingCart className="mr-2 h-4 w-4" />
+              Purchases
+            </TabsTrigger>
+            <TabsTrigger value="analytics">
+              <BarChart3 className="mr-2 h-4 w-4" />
+              Analytics
+            </TabsTrigger>
+          </TabsList>
+        </div>
         <TabsContent value="inventory" className="space-y-4">
           <InventoryPanel />
         </TabsContent>
@@ -130,6 +147,15 @@ export default function DashboardOverview() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Purchase Workflow Overview</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <PurchaseWorkflowDiagram data={mockWorkflowData} />
+        </CardContent>
+      </Card>
     </div>
   );
 }

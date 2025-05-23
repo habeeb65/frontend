@@ -4,10 +4,13 @@ import {
   BarChart3,
   Box,
   CreditCard,
+  DollarSign,
   FileText,
   Home,
   Package,
+  Settings,
   ShoppingCart,
+  User,
   Users,
 } from "lucide-react";
 import TenantSwitcher from "@/components/ui/tenant-switcher";
@@ -72,6 +75,21 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       href: "/products",
       icon: <Package className="h-5 w-5" />,
     },
+    {
+      title: "Profile",
+      href: "/profile",
+      icon: <User className="h-5 w-5" />,
+    },
+    {
+      title: "Settings",
+      href: "/settings",
+      icon: <Settings className="h-5 w-5" />,
+    },
+    {
+      title: "Billing",
+      href: "/billing",
+      icon: <DollarSign className="h-5 w-5" />,
+    },
   ];
 
   return (
@@ -85,7 +103,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div className="px-4">
           <TenantSwitcher />
         </div>
-        <nav className="flex-1 space-y-1 px-2">
+        <nav className="flex-1 space-y-1 px-2 overflow-y-auto">
           {navItems.map((item) => (
             <Link
               key={item.href}
